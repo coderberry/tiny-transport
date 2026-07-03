@@ -1,5 +1,6 @@
+import { exchangeCargo } from '../game/cargo'
 import { TRAIN_DWELL_SECONDS } from '../game/economy'
-import type { GameState, PathStep, Train } from '../game/types'
+import type { GameState, PathStep, SimEvent, Train } from '../game/types'
 import { findPath, type PathResult } from '../rail/pathfinding'
 
 const REPATH_INTERVAL = 2 // seconds between retries when parked
@@ -164,8 +165,8 @@ function tryResume(state: GameState, train: Train): void {
   startMoving(train, path)
 }
 
-/** Arrived at the target stop: snap to its node and start dwelling. */
-function arrive(state: GameState, train: Train): void {
+/** Arrived at the target stop: snap to its node, exchange cargo, dwell. */
+function arrive(state: GameState, train: Train, events: SimEvent[]): void {
   const route = state.routes[train.routeId]
   const stationId = route?.stationIds[train.stopIndex % Math.max(stationCount(state, train), 1)]
   const station = stationId ? state.stations[stationId] : undefined
@@ -180,9 +181,10 @@ function arrive(state: GameState, train: Train): void {
   train.distance = 0
   train.status = 'loading'
   train.dwellRemaining = TRAIN_DWELL_SECONDS
+  if (station) exchangeCargo(state, train, station, events)
 }
 
-export function moveTrains(state: GameState, dt: number): void {
+export function moveTrains(state: GameState, dt: number, events: SimEvent[] = []): void {
   for (const train of Object.values(state.trains)) {
     train.prevX = train.x
     train.prevY = train.y
@@ -195,7 +197,7 @@ export function moveTrains(state: GameState, dt: number): void {
         }
         train.distance += train.speed * dt
         if (train.distance >= train.pathLength) {
-          arrive(state, train)
+          arrive(state, train, events)
         } else {
           const p = pointAlongPath(state, train.path, train.distance)
           if (p) {

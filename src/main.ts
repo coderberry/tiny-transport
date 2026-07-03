@@ -4,6 +4,7 @@ import { startLoop, TICK_DT } from './core/loop'
 import { simulationTick } from './game/simulation'
 import { newGame } from './map/generateMap'
 import { createCamera } from './render/camera'
+import { spawnFloatingText, updateFloatingText } from './render/floatingText'
 import { updateLabelScale } from './render/labels'
 import { renderPlaces } from './render/renderPlaces'
 import { renderRails } from './render/renderRails'
@@ -44,6 +45,7 @@ async function boot() {
     stations: new Container(),
     trains: new Container(),
     selection: new Container(),
+    fx: new Container(),
   }
   camera.world.addChild(
     layers.terrain,
@@ -52,6 +54,7 @@ async function boot() {
     layers.stations,
     layers.trains,
     layers.selection,
+    layers.fx,
   )
 
   renderTerrain(layers.terrain, state)
@@ -70,20 +73,32 @@ async function boot() {
 
   if (import.meta.env.DEV) {
     // Debug handle for the console and automated browser checks.
-    ;(window as unknown as Record<string, unknown>).__game = { state, camera }
+    const [{ buildRail, checkRailPlacement }, { buildStation }, { createRoute, buyTrain }] =
+      await Promise.all([
+        import('./rail/buildTrack'),
+        import('./game/actions'),
+        import('./trains/routeLogic'),
+      ])
+    ;(window as unknown as Record<string, unknown>).__game = {
+      state,
+      camera,
+      actions: { buildRail, checkRailPlacement, buildStation, createRoute, buyTrain },
+    }
   }
 
   const hud = setupHud()
 
   const loop = startLoop({
     tick: () => {
-      simulationTick(state, TICK_DT)
+      const events = simulationTick(state, TICK_DT)
+      for (const e of events) spawnFloatingText(layers.fx, e.x, e.y, e.text)
     },
     render: (alpha, fps) => {
       renderRails(layers.rails, state)
       renderStations(layers.stations, state)
       renderTrains(layers.trains, state, alpha)
       renderSelection(layers.selection, state)
+      updateFloatingText()
       updateLabelScale(camera.getZoom())
       app.render()
       hud.update(state, fps, loop.getSpeed())

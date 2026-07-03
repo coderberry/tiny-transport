@@ -111,6 +111,13 @@ export interface Train {
   totalEarned: number
 }
 
+/** Transient per-tick notification for renderer effects; never serialized. */
+export interface SimEvent {
+  x: number
+  y: number
+  text: string
+}
+
 export interface GameState {
   seed: number
   tick: number
