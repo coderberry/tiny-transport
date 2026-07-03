@@ -16,6 +16,23 @@ npm run typecheck  # tsc --noEmit
 npm run build      # production build in dist/
 ```
 
+## Deploy
+
+Cloudflare Pages settings:
+
+- Framework preset: `Vite`
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: repository root
+
+Direct upload: `npx wrangler pages deploy dist --project-name=tiny-transport`
+
+Local Pages preview:
+
+```sh
+npm run pages:dev
+```
+
 ## How to play
 
 1. **Rail (2)** — click to anchor, click again to place straight/45° track;

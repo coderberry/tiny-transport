@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "pages:dev": "npm run build && npx wrangler pages dev dist",
+    "pages:deploy": "npm run build && npx wrangler pages deploy dist --project-name=tiny-transport",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
