@@ -3,6 +3,8 @@
 A small Transport Fever–style train logistics game in the browser. Build rails
 between cities and industries, run trains, haul cargo, earn money.
 
+Playable version: https://tiny-transport.pages.dev/
+
 TypeScript + Vite + PixiJS, with a custom fixed-tick simulation over a rail
 graph. No physics engine, no game framework — the game is a graph simulation.
 
@@ -17,6 +19,8 @@ npm run build      # production build in dist/
 ```
 
 ## Deploy
+
+Production URL: https://tiny-transport.pages.dev/
 
 Cloudflare Pages settings:
 
