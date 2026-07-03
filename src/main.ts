@@ -1,6 +1,7 @@
 import { Application, Container } from 'pixi.js'
 import './style.css'
-import { startLoop } from './core/loop'
+import { startLoop, TICK_DT } from './core/loop'
+import { simulationTick } from './game/simulation'
 import { newGame } from './map/generateMap'
 import { createCamera } from './render/camera'
 import { updateLabelScale } from './render/labels'
@@ -9,8 +10,10 @@ import { renderRails } from './render/renderRails'
 import { renderSelection } from './render/renderSelection'
 import { renderStations } from './render/renderStations'
 import { renderTerrain } from './render/renderTerrain'
+import { renderTrains } from './render/renderTrains'
 import { setupHud } from './ui/hud'
 import { setupInput } from './ui/input'
+import { setupRoutePanel } from './ui/routePanel'
 import { setupToolbar } from './ui/toolbar'
 import { makeHandlers } from './ui/tools'
 
@@ -63,6 +66,7 @@ async function boot() {
 
   setupInput(app, camera, () => makeHandlers(state))
   setupToolbar()
+  setupRoutePanel(state)
 
   if (import.meta.env.DEV) {
     // Debug handle for the console and automated browser checks.
@@ -73,11 +77,12 @@ async function boot() {
 
   const loop = startLoop({
     tick: () => {
-      state.tick++
+      simulationTick(state, TICK_DT)
     },
-    render: (_alpha, fps) => {
+    render: (alpha, fps) => {
       renderRails(layers.rails, state)
       renderStations(layers.stations, state)
+      renderTrains(layers.trains, state, alpha)
       renderSelection(layers.selection, state)
       updateLabelScale(camera.getZoom())
       app.render()

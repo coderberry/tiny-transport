@@ -106,6 +106,28 @@ export function renderSelection(layer: Container, state: GameState): void {
     }
   }
 
+  // Route draft: dashed hops between the picked stations, in order.
+  if (ui.tool === 'route' && ui.routeDraft && ui.routeDraft.length > 0) {
+    let prev: { x: number; y: number } | null = null
+    ui.routeDraft.forEach((stationId, i) => {
+      const station = state.stations[stationId]
+      const node = station && state.railNodes[station.nodeId]
+      if (!node) return
+      const px = (node.x + 0.5) * TILE
+      const py = (node.y + 0.5) * TILE
+      g.circle(px, py, TILE * 0.28).stroke({ color: PATH, width: 3 })
+      if (i === 0) g.circle(px, py, TILE * 0.12).fill(PATH)
+      if (prev) {
+        g.moveTo(prev.x, prev.y).lineTo(px, py).stroke({
+          color: PATH,
+          width: 2,
+          alpha: 0.6,
+        })
+      }
+      prev = { x: px, y: py }
+    })
+  }
+
   // Path debug: two stations picked with the select tool.
   if (ui.tool === 'select' && ui.pathDebug.length === 2) {
     const [aId, bId] = ui.pathDebug as [string, string]

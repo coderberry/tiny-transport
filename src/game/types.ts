@@ -85,6 +85,8 @@ export interface Train {
   routeId: string
   /** Index into route.stationIds of the stop we're heading to (or dwelling at). */
   stopIndex: number
+  /** Node the train is parked/dwelling at; null while moving. */
+  atNodeId: string | null
   /** Current leg through the rail graph; null when parked. */
   path: PathStep[] | null
   pathLength: number

@@ -161,6 +161,35 @@ function bulldozeHandlers(state: GameState): PointerHandlers {
   }
 }
 
+function routeHandlers(state: GameState): PointerHandlers {
+  const draftHint = () => {
+    const draft = ui.routeDraft ?? []
+    const names = draft.map((id) => state.stations[id]?.name ?? '?').join(' → ')
+    setHint(
+      draft.length === 0
+        ? 'Click stations in order to build the route'
+        : `${names} — click more stations, Enter to create, right-click to undo`,
+    )
+  }
+  return {
+    onMove() {
+      draftHint()
+    },
+    onClick(wx, wy) {
+      const station = findStationNear(state, wx, wy, 1.2)
+      if (!station) return
+      ui.routeDraft ??= []
+      if (ui.routeDraft[ui.routeDraft.length - 1] === station.id) return
+      ui.routeDraft.push(station.id)
+      draftHint()
+    },
+    onRightClick() {
+      ui.routeDraft?.pop()
+      draftHint()
+    },
+  }
+}
+
 function selectHandlers(state: GameState): PointerHandlers {
   return {
     onClick(wx, wy) {
@@ -189,6 +218,8 @@ export function makeHandlers(state: GameState): PointerHandlers {
       return railHandlers(state)
     case 'station':
       return stationHandlers(state)
+    case 'route':
+      return routeHandlers(state)
     case 'bulldoze':
       return bulldozeHandlers(state)
     default:
