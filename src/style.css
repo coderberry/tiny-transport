@@ -68,6 +68,11 @@ button:disabled {
   opacity: 0.45;
   cursor: default;
 }
+button.small {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
 
 .badge {
   background: rgba(20, 32, 27, 0.92);

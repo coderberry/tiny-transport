@@ -122,8 +122,7 @@ function tryDepart(state: GameState, train: Train): void {
     return
   }
   const n = route.stationIds.length
-  train.stopIndex = train.stopIndex % n
-  const nextIndex = (train.stopIndex + 1) % n
+  const nextIndex = (train.stopIndex % n + 1) % n
   const target = state.stations[route.stationIds[nextIndex]!]
   const fromNodeId = train.atNodeId ?? nearestNodeId(state, train.x, train.y)
   if (!target || !fromNodeId) {
@@ -131,13 +130,15 @@ function tryDepart(state: GameState, train: Train): void {
     train.repathCooldown = REPATH_INTERVAL
     return
   }
+  // Commit the target before pathfinding so a failed departure retries the
+  // NEXT stop, not the platform the train is already standing at.
+  train.stopIndex = nextIndex
   const path = findPath(state, fromNodeId, target.nodeId)
   if (!path) {
     train.status = 'noPath'
     train.repathCooldown = REPATH_INTERVAL
     return
   }
-  train.stopIndex = nextIndex
   startMoving(train, path)
 }
 

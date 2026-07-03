@@ -23,19 +23,53 @@ function graphicsFor(layer: Container): Graphics {
   return g
 }
 
-// The debug path is recomputed only when the graph or the picked pair change.
-let pathCacheKey = ''
-let pathCache: PathResult | null = null
+// Paths drawn every frame are recomputed only when the graph changes.
+const pathCache = new Map<string, PathResult | null>()
 
-function debugPath(state: GameState, aStation: string, bStation: string): PathResult | null {
+function cachedStationPath(
+  state: GameState,
+  aStation: string,
+  bStation: string,
+): PathResult | null {
   const key = `${state.railVersion}:${aStation}:${bStation}`
-  if (key !== pathCacheKey) {
-    pathCacheKey = key
-    const a = state.stations[aStation]
-    const b = state.stations[bStation]
-    pathCache = a && b ? findPath(state, a.nodeId, b.nodeId) : null
+  const hit = pathCache.get(key)
+  if (hit !== undefined) return hit
+  if (pathCache.size > 300) pathCache.clear()
+  const a = state.stations[aStation]
+  const b = state.stations[bStation]
+  const result = a && b ? findPath(state, a.nodeId, b.nodeId) : null
+  pathCache.set(key, result)
+  return result
+}
+
+function strokeStationPath(
+  g: Graphics,
+  state: GameState,
+  aStationId: string,
+  bStationId: string,
+  color: number,
+  width: number,
+  alpha: number,
+): boolean {
+  const result = cachedStationPath(state, aStationId, bStationId)
+  const aStation = state.stations[aStationId]
+  if (!result || !aStation) return false
+  const seq = nodeSequence(state, aStation.nodeId, result.steps)
+  let started = false
+  for (const nodeId of seq) {
+    const node = state.railNodes[nodeId]
+    if (!node) continue
+    const px = (node.x + 0.5) * TILE
+    const py = (node.y + 0.5) * TILE
+    if (!started) {
+      g.moveTo(px, py)
+      started = true
+    } else {
+      g.lineTo(px, py)
+    }
   }
-  return pathCache
+  g.stroke({ color, width, alpha, cap: 'round', join: 'round' })
+  return true
 }
 
 /** Transient overlay (previews, highlights) — redrawn every frame. */
@@ -131,27 +165,47 @@ export function renderSelection(layer: Container, state: GameState): void {
   // Path debug: two stations picked with the select tool.
   if (ui.tool === 'select' && ui.pathDebug.length === 2) {
     const [aId, bId] = ui.pathDebug as [string, string]
-    const result = debugPath(state, aId, bId)
-    const aStation = state.stations[aId]
-    if (result && aStation) {
-      const seq = nodeSequence(state, aStation.nodeId, result.steps)
-      let started = false
-      for (const nodeId of seq) {
-        const node = state.railNodes[nodeId]
-        if (!node) continue
-        const px = (node.x + 0.5) * TILE
-        const py = (node.y + 0.5) * TILE
-        if (!started) {
-          g.moveTo(px, py)
-          started = true
-        } else {
-          g.lineTo(px, py)
-        }
-      }
-      g.stroke({ color: PATH, width: TILE * 0.2, alpha: 0.85, cap: 'round', join: 'round' })
-      setHint(`Path: ${result.length.toFixed(1)} tiles`)
+    const drawn = strokeStationPath(g, state, aId, bId, PATH, TILE * 0.2, 0.85)
+    if (drawn) {
+      const result = cachedStationPath(state, aId, bId)
+      setHint(`Path: ${result?.length.toFixed(1)} tiles`)
     } else {
       setHint('No rail path between those stations')
+    }
+  }
+
+  // Route highlighted from the route panel: stroke every hop.
+  if (ui.selectedRouteId) {
+    const route = state.routes[ui.selectedRouteId]
+    if (route && route.stationIds.length >= 2) {
+      for (let i = 0; i < route.stationIds.length; i++) {
+        const a = route.stationIds[i]!
+        const b = route.stationIds[(i + 1) % route.stationIds.length]!
+        if (a === b) continue
+        strokeStationPath(g, state, a, b, 0x9ad1ff, TILE * 0.14, 0.7)
+      }
+    }
+  }
+
+  // Ring around the selected entity.
+  if (ui.selection) {
+    const ring = (x: number, y: number, r: number) =>
+      g
+        .circle((x + 0.5) * TILE, (y + 0.5) * TILE, r * TILE)
+        .stroke({ color: 0x9ad1ff, width: 2.5, alpha: 0.9 })
+    const sel = ui.selection
+    if (sel.kind === 'station') {
+      const node = state.stations[sel.id] && state.railNodes[state.stations[sel.id]!.nodeId]
+      if (node) ring(node.x, node.y, 0.85)
+    } else if (sel.kind === 'train') {
+      const train = state.trains[sel.id]
+      if (train) ring(train.x, train.y, 0.75)
+    } else if (sel.kind === 'city') {
+      const city = state.cities[sel.id]
+      if (city) ring(city.x, city.y, 1.4)
+    } else {
+      const industry = state.industries[sel.id]
+      if (industry) ring(industry.x, industry.y, 0.85)
     }
   }
 }

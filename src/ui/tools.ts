@@ -1,6 +1,8 @@
 import {
   buildStation,
   checkStationPlacement,
+  findCityNear,
+  findIndustryNear,
   findStationNear,
   removeStation,
   stationCatchment,
@@ -9,6 +11,7 @@ import type { GameState } from '../game/types'
 import { INDUSTRY_DEFS } from '../content/industries'
 import { inBounds } from '../map/terrain'
 import { buildRail, bulldozeEdge, checkRailPlacement, findEdgeNear } from '../rail/buildTrack'
+import { findTrainNear } from '../trains/routeLogic'
 import type { PointerHandlers } from './input'
 import { setHint, ui } from './uiState'
 
@@ -193,6 +196,12 @@ function routeHandlers(state: GameState): PointerHandlers {
 function selectHandlers(state: GameState): PointerHandlers {
   return {
     onClick(wx, wy) {
+      const train = findTrainNear(state, wx, wy)
+      if (train) {
+        ui.selection = { kind: 'train', id: train.id }
+        ui.pathDebug = []
+        return
+      }
       const station = findStationNear(state, wx, wy)
       if (station) {
         ui.selection = { kind: 'station', id: station.id }
@@ -203,6 +212,18 @@ function selectHandlers(state: GameState): PointerHandlers {
           ui.pathDebug = [station.id]
           setHint('Click another station to preview the rail path')
         }
+        return
+      }
+      const industry = findIndustryNear(state, wx, wy)
+      if (industry) {
+        ui.selection = { kind: 'industry', id: industry.id }
+        ui.pathDebug = []
+        return
+      }
+      const city = findCityNear(state, wx, wy)
+      if (city) {
+        ui.selection = { kind: 'city', id: city.id }
+        ui.pathDebug = []
         return
       }
       ui.selection = null

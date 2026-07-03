@@ -107,6 +107,21 @@ export function removeStation(state: GameState, stationId: string): void {
   removeNodeIfIsolated(state, station.nodeId)
 }
 
+export function findCityNear(state: GameState, wx: number, wy: number): City | undefined {
+  for (const city of Object.values(state.cities)) {
+    const r = 0.7 + Math.min(city.population / 2600, 1) * 0.5 // matches render radius
+    if (Math.hypot(city.x + 0.5 - wx, city.y + 0.5 - wy) <= r) return city
+  }
+  return undefined
+}
+
+export function findIndustryNear(state: GameState, wx: number, wy: number): Industry | undefined {
+  for (const industry of Object.values(state.industries)) {
+    if (Math.hypot(industry.x + 0.5 - wx, industry.y + 0.5 - wy) <= 0.7) return industry
+  }
+  return undefined
+}
+
 export function findStationNear(
   state: GameState,
   wx: number,

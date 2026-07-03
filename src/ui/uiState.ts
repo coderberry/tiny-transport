@@ -15,6 +15,8 @@ export interface UiState {
   hoverTile: { x: number; y: number } | null
   hoverEdgeId: string | null
   selection: Selection | null
+  /** Route highlighted from the route panel. */
+  selectedRouteId: string | null
   /** Station ids collected while drafting a route (route tool). */
   routeDraft: string[] | null
   /** Two station ids picked in select mode for the path debug view. */
@@ -27,6 +29,7 @@ export const ui: UiState = {
   hoverTile: null,
   hoverEdgeId: null,
   selection: null,
+  selectedRouteId: null,
   routeDraft: null,
   pathDebug: [],
 }

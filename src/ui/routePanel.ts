@@ -1,6 +1,12 @@
 import { TRAIN_COST } from '../game/economy'
 import type { GameState } from '../game/types'
-import { buyTrain, createRoute, deleteRoute, trainsOnRoute } from '../trains/routeLogic'
+import {
+  buyTrain,
+  createRoute,
+  deleteRoute,
+  routeBroken,
+  trainsOnRoute,
+} from '../trains/routeLogic'
 import { setHint, setTool, ui } from './uiState'
 
 /**
@@ -36,13 +42,22 @@ export function setupRoutePanel(state: GameState): void {
     }
     for (const route of routes) {
       const stops = route.stationIds.map((id) => state.stations[id]?.name ?? '?').join(' → ')
-      const trainCount = trainsOnRoute(state, route.id).length
-      html += `<div class="route-item" data-route="${route.id}">
+      const trains = trainsOnRoute(state, route.id)
+      const stuck = trains.filter((t) => t.status === 'noPath' || t.status === 'waiting').length
+      const broken = routeBroken(state, route)
+      const warnings =
+        (broken ? `<div class="row"><span class="warn">⚠ No rail path between stops</span></div>` : '') +
+        (!broken && stuck > 0
+          ? `<div class="row"><span class="warn">⚠ ${stuck} train${stuck > 1 ? 's' : ''} stuck</span></div>`
+          : '')
+      const selected = ui.selectedRouteId === route.id ? ' selected' : ''
+      html += `<div class="route-item${selected}" data-route-select="${route.id}">
         <div class="row"><strong>${route.name}</strong><span>$${Math.round(route.totalEarned).toLocaleString('en-US')} earned</span></div>
         <div class="row"><span class="k">${stops}</span></div>
+        ${warnings}
         <div class="actions">
           <button data-action="train" data-route="${route.id}">+ Train ($${TRAIN_COST.toLocaleString('en-US')})</button>
-          <span class="badge">${trainCount} 🚂</span>
+          <span class="badge">${trains.length} 🚂</span>
           <button data-action="delete" data-route="${route.id}">Delete</button>
         </div>
       </div>`
@@ -52,7 +67,16 @@ export function setupRoutePanel(state: GameState): void {
 
   panel.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest('[data-action]') as HTMLElement | null
-    if (!target) return
+    if (!target) {
+      // Plain click on a route row toggles its map highlight.
+      const item = (e.target as HTMLElement).closest('[data-route-select]') as HTMLElement | null
+      const id = item?.dataset['routeSelect']
+      if (id) {
+        ui.selectedRouteId = ui.selectedRouteId === id ? null : id
+        render()
+      }
+      return
+    }
     const action = target.dataset['action']
     const routeId = target.dataset['route']
     if (action === 'new') {
@@ -73,6 +97,7 @@ export function setupRoutePanel(state: GameState): void {
       if (!result.ok) setHint(result.reason ?? 'Cannot buy train', 2000)
     } else if (action === 'delete' && routeId) {
       deleteRoute(state, routeId)
+      if (ui.selectedRouteId === routeId) ui.selectedRouteId = null
     }
     render()
   })

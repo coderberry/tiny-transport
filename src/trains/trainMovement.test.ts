@@ -110,6 +110,21 @@ describe('train lifecycle', () => {
     expect(['moving', 'loading']).toContain(train.status)
   })
 
+  it('a failed departure targets the NEXT stop, not the current platform', () => {
+    const { state } = lineWorld()
+    buyTrain(state, Object.keys(state.routes)[0]!)
+    const train = theTrain(state)
+    // Sever the line while the train is still dwelling at stop 0.
+    bulldozeEdge(state, Object.keys(state.railEdges)[0]!)
+    run(state, 15) // dwell ends → departure fails
+    expect(train.status).toBe('noPath')
+    expect(train.stopIndex).toBe(1) // aiming at stop B, not stop A
+    // Restore track: the retry should reach stop B, not bounce in place.
+    buildRail(state, 0, 0, 10, 0)
+    run(state, 60)
+    expect(train.x).toBeGreaterThan(0)
+  })
+
   it('waits when its route loses a stop, and no route means waiting too', () => {
     const { state, b } = lineWorld()
     buyTrain(state, Object.keys(state.routes)[0]!)

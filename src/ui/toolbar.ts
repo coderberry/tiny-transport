@@ -35,8 +35,15 @@ export function setupToolbar(): void {
   window.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement) return
     if (e.key === 'Escape') {
-      if (ui.railAnchor) ui.railAnchor = null
-      else setTool('select')
+      if (ui.railAnchor) {
+        ui.railAnchor = null
+      } else if (ui.tool !== 'select') {
+        setTool('select')
+      } else {
+        ui.selection = null
+        ui.selectedRouteId = null
+        ui.pathDebug = []
+      }
       return
     }
     const match = BUTTONS.find((b) => b.key === e.key)

@@ -14,6 +14,7 @@ import { renderTerrain } from './render/renderTerrain'
 import { renderTrains } from './render/renderTrains'
 import { setupHud } from './ui/hud'
 import { setupInput } from './ui/input'
+import { setupInspector } from './ui/inspector'
 import { setupRoutePanel } from './ui/routePanel'
 import { setupToolbar } from './ui/toolbar'
 import { makeHandlers } from './ui/tools'
@@ -70,6 +71,7 @@ async function boot() {
   setupInput(app, camera, () => makeHandlers(state))
   setupToolbar()
   setupRoutePanel(state)
+  setupInspector(state)
 
   if (import.meta.env.DEV) {
     // Debug handle for the console and automated browser checks.
