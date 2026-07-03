@@ -4,9 +4,13 @@ import { startLoop } from './core/loop'
 import { newGame } from './map/generateMap'
 import { createCamera } from './render/camera'
 import { renderPlaces, updateLabelScale } from './render/renderPlaces'
+import { renderRails } from './render/renderRails'
+import { renderSelection } from './render/renderSelection'
 import { renderTerrain } from './render/renderTerrain'
 import { setupHud } from './ui/hud'
 import { setupInput } from './ui/input'
+import { setupToolbar } from './ui/toolbar'
+import { makeHandlers } from './ui/tools'
 
 function seedFromUrl(): number {
   const raw = new URLSearchParams(location.search).get('seed')
@@ -55,7 +59,13 @@ async function boot() {
     ) * 0.98
   camera.centerOn(state.map.width / 2, state.map.height / 2, fitZoom)
 
-  setupInput(app, camera, () => ({}))
+  setupInput(app, camera, () => makeHandlers(state))
+  setupToolbar()
+
+  if (import.meta.env.DEV) {
+    // Debug handle for the console and automated browser checks.
+    ;(window as unknown as Record<string, unknown>).__game = { state, camera }
+  }
 
   const hud = setupHud()
 
@@ -64,6 +74,8 @@ async function boot() {
       state.tick++
     },
     render: (_alpha, fps) => {
+      renderRails(layers.rails, state)
+      renderSelection(layers.selection, state)
       updateLabelScale(camera.getZoom())
       app.render()
       hud.update(state, fps, loop.getSpeed())
