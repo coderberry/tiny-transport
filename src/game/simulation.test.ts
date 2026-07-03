@@ -54,6 +54,20 @@ describe('1,000-tick coal delivery integration', () => {
     expect(state.tick).toBe(1000)
   })
 
+  it('idle trains drain money through running costs', () => {
+    const state = makeTestState(30, 30)
+    buildRail(state, 0, 0, 10, 0)
+    const a = buildStation(state, 0, 0).stationId!
+    const b = buildStation(state, 10, 0).stationId!
+    const routeId = createRoute(state, [a, b]).routeId!
+    buyTrain(state, routeId)
+    // Nothing to haul on this route: pure upkeep.
+    const before = state.money
+    for (let i = 0; i < 300; i++) simulationTick(state, 0.1) // 30 s
+    expect(state.money).toBeLessThan(before)
+    expect(before - state.money).toBeCloseTo(60, 0) // $2/s × 30 s
+  })
+
   it('is deterministic: identical worlds tick to identical states', () => {
     const a = buildCoalWorld()
     const b = buildCoalWorld()

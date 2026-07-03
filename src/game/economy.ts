@@ -8,8 +8,8 @@ export const BULLDOZE_REFUND = 0.5
 export const TRAIN_SPEED = 6 // tiles per second
 export const TRAIN_CAPACITY = 30
 export const TRAIN_DWELL_SECONDS = 3
-/** Upkeep per train per second — added in M8 so idle trains cost money. */
-export const TRAIN_RUNNING_COST_PER_SEC = 0
+/** Upkeep per train per second — idle trains bleed money too. */
+export const TRAIN_RUNNING_COST_PER_SEC = 2
 
 export const STATION_STORAGE_CAP = 60
 export const STATION_CATCHMENT_RADIUS = 3.5 // tiles

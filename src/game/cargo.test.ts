@@ -88,6 +88,39 @@ describe('exchangeCargo', () => {
     expect(events[0]!.text).toContain('+$')
   })
 
+  it('pays for feedstock delivered to a consuming industry, which processes it into goods', () => {
+    const state = makeTestState(40, 20)
+    state.industries['mill'] = { id: 'mill', kind: 'sawmill', x: 10, y: 2, inventory: {}, progress: 0 }
+    state.cities['city'] = { id: 'city', name: 'Goodston', x: 30, y: 2, population: 2000, demands: ['goods'] }
+    buildRail(state, 2, 2, 10, 2)
+    buildRail(state, 10, 2, 30, 2)
+    const woodStop = buildStation(state, 2, 2).stationId!
+    const millStop = buildStation(state, 10, 2).stationId!
+    buildStation(state, 30, 2)
+    createRoute(state, [woodStop, millStop])
+    const train = trainAt(state, millStop)
+    train.cargo['wood'] = 10
+    train.cargoOrigin['wood'] = { x: 2, y: 2 }
+    const moneyBefore = state.money
+    const events: SimEvent[] = []
+    exchangeCargo(state, train, state.stations[millStop]!, events)
+    // Paid for the wood haul (8 tiles), feedstock handed to the mill.
+    expect(state.money).toBe(moneyBefore + Math.round(10 * CARGO.wood.rate * 8))
+    expect(train.cargo['wood']).toBeUndefined()
+    expect(state.industries['mill']!.inventory['wood']).toBe(10)
+    // The mill converts wood → goods into its station storage over time.
+    produceResources(state, 10) // sawmill rate 0.5/s → 5 goods
+    expect(state.stations[millStop]!.storage['goods']).toBe(5)
+    expect(state.industries['mill']!.inventory['wood']).toBe(5)
+  })
+
+  it('processors starve without feedstock', () => {
+    const state = makeTestState(20, 20)
+    state.industries['mill'] = { id: 'mill', kind: 'sawmill', x: 10, y: 2, inventory: {}, progress: 0 }
+    produceResources(state, 60)
+    expect(state.industries['mill']!.inventory['goods'] ?? 0).toBe(0)
+  })
+
   it('does not pay for cargo the city has no demand for', () => {
     const { state, cityStation } = coalWorld()
     const train = trainAt(state, cityStation)

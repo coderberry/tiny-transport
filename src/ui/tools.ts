@@ -195,6 +195,18 @@ function routeHandlers(state: GameState): PointerHandlers {
 
 function selectHandlers(state: GameState): PointerHandlers {
   return {
+    onMove(wx, wy) {
+      const name =
+        (findTrainNear(state, wx, wy) && 'Train') ??
+        findStationNear(state, wx, wy)?.name ??
+        (() => {
+          const industry = findIndustryNear(state, wx, wy)
+          return industry ? INDUSTRY_DEFS[industry.kind].name : undefined
+        })() ??
+        findCityNear(state, wx, wy)?.name
+      if (name) setHint(`${name} — click to inspect`)
+      else if (ui.selection === null && ui.pathDebug.length === 0) setHint('')
+    },
     onClick(wx, wy) {
       const train = findTrainNear(state, wx, wy)
       if (train) {

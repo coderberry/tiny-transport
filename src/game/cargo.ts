@@ -29,7 +29,8 @@ function stationForIndustry(state: GameState, industryId: string): Station | und
 /**
  * Industries accumulate fractional progress and emit whole units into their
  * linked station's storage — or their own inventory while unconnected.
- * Production stalls when the destination is full.
+ * Processors (sawmill) convert delivered feedstock 1:1 instead of creating
+ * from nothing. Production stalls when the destination is full.
  */
 export function produceResources(state: GameState, dt: number): void {
   for (const industry of Object.values(state.industries)) {
@@ -39,6 +40,19 @@ export function produceResources(state: GameState, dt: number): void {
     const target: CargoAmounts = station ? station.storage : industry.inventory
     const cap = station ? STATION_STORAGE_CAP : INDUSTRY_INVENTORY_CAP
     if ((target[def.produces] ?? 0) >= cap) continue // stalled
+
+    if (def.consumes) {
+      // Processor: limited by feedstock on hand.
+      const feed = Math.floor(industry.inventory[def.consumes] ?? 0)
+      if (feed <= 0) continue
+      industry.progress += def.rate * dt
+      const whole = Math.min(Math.floor(industry.progress), feed)
+      if (whole <= 0) continue
+      industry.progress -= whole
+      industry.inventory[def.consumes] = (industry.inventory[def.consumes] ?? 0) - whole
+      target[def.produces] = Math.min(cap, (target[def.produces] ?? 0) + whole)
+      continue
+    }
 
     industry.progress += def.rate * dt
     const whole = Math.floor(industry.progress)
@@ -112,16 +126,24 @@ export function exchangeCargo(
     }
 
     if (consumes === cargo && industry) {
-      // Feedstock for a processing industry (no payment — the goods pay later).
+      // Feedstock delivery pays like any freight; the processor keeps it.
       const room = INDUSTRY_INVENTORY_CAP - (industry.inventory[cargo] ?? 0)
       const moved = Math.min(room, amount)
       if (moved > 0) {
+        const origin = train.cargoOrigin[cargo]
+        const haul = origin && node ? Math.hypot(origin.x - node.x, origin.y - node.y) : 10
+        const revenue = Math.round(moved * CARGO[cargo].rate * haul)
+        state.money += revenue
+        train.totalEarned += revenue
+        if (route) route.totalEarned += revenue
         industry.inventory[cargo] = (industry.inventory[cargo] ?? 0) + moved
         train.cargo[cargo] = amount - moved
         if ((train.cargo[cargo] ?? 0) <= 0) {
           delete train.cargo[cargo]
           delete train.cargoOrigin[cargo]
         }
+        if (node)
+          events.push({ x: node.x, y: node.y, text: `+$${revenue.toLocaleString('en-US')}` })
       }
     }
   }

@@ -46,6 +46,9 @@ body {
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 46vw;
 }
 
 button {
@@ -84,6 +87,9 @@ button.small {
 .badge.money {
   color: #ffd76a;
   font-weight: 600;
+}
+.badge.money.negative {
+  color: #ff7a6b;
 }
 
 .panel {

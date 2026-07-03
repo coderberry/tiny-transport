@@ -50,7 +50,12 @@ export function setupHud(actions: HudActions): Hud {
     update(state, fps, speed) {
       if (state.money !== lastMoney) {
         lastMoney = state.money
-        moneyEl.textContent = `$${Math.floor(state.money).toLocaleString('en-US')}`
+        const whole = Math.floor(state.money)
+        moneyEl.textContent =
+          whole < 0
+            ? `-$${Math.abs(whole).toLocaleString('en-US')}`
+            : `$${whole.toLocaleString('en-US')}`
+        moneyEl.classList.toggle('negative', whole < 0)
       }
       if (speed !== lastSpeed) {
         lastSpeed = speed
