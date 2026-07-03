@@ -3,9 +3,11 @@ import './style.css'
 import { startLoop } from './core/loop'
 import { newGame } from './map/generateMap'
 import { createCamera } from './render/camera'
-import { renderPlaces, updateLabelScale } from './render/renderPlaces'
+import { updateLabelScale } from './render/labels'
+import { renderPlaces } from './render/renderPlaces'
 import { renderRails } from './render/renderRails'
 import { renderSelection } from './render/renderSelection'
+import { renderStations } from './render/renderStations'
 import { renderTerrain } from './render/renderTerrain'
 import { setupHud } from './ui/hud'
 import { setupInput } from './ui/input'
@@ -75,6 +77,7 @@ async function boot() {
     },
     render: (_alpha, fps) => {
       renderRails(layers.rails, state)
+      renderStations(layers.stations, state)
       renderSelection(layers.selection, state)
       updateLabelScale(camera.getZoom())
       app.render()

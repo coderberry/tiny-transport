@@ -1,12 +1,19 @@
+import {
+  buildStation,
+  checkStationPlacement,
+  findStationNear,
+  removeStation,
+  stationCatchment,
+} from '../game/actions'
 import type { GameState } from '../game/types'
+import { INDUSTRY_DEFS } from '../content/industries'
 import { inBounds } from '../map/terrain'
-import { buildRail, checkRailPlacement, findEdgeNear, bulldozeEdge } from '../rail/buildTrack'
-import { getNodeAt } from '../rail/graph'
+import { buildRail, bulldozeEdge, checkRailPlacement, findEdgeNear } from '../rail/buildTrack'
 import type { PointerHandlers } from './input'
 import { setHint, ui } from './uiState'
 
 /**
- * Snap a world point to a tile for rail placement: prefer an existing node
+ * Snap a world point to a tile for placement: prefer an existing node
  * within magnet range, else the tile under the cursor.
  */
 export function snapTile(state: GameState, wx: number, wy: number): { x: number; y: number } {
@@ -98,13 +105,53 @@ function railHandlers(state: GameState): PointerHandlers {
   }
 }
 
+function stationHandlers(state: GameState): PointerHandlers {
+  return {
+    onMove(wx, wy) {
+      const tile = snapTile(state, wx, wy)
+      ui.hoverTile = inBounds(state.map, tile.x, tile.y) ? tile : null
+      if (!ui.hoverTile) return
+      const check = checkStationPlacement(state, ui.hoverTile.x, ui.hoverTile.y)
+      if (!check.ok) {
+        setHint(check.reason ?? 'Cannot place station here')
+        return
+      }
+      const { city, industry } = stationCatchment(state, ui.hoverTile.x, ui.hoverTile.y)
+      const links = [
+        ...(city ? [city.name] : []),
+        ...(industry ? [INDUSTRY_DEFS[industry.kind].name] : []),
+      ]
+      setHint(
+        `Station: $${check.cost.toLocaleString('en-US')}` +
+          (links.length ? ` — links ${links.join(' + ')}` : ' — nothing in range'),
+      )
+    },
+    onClick(wx, wy) {
+      const tile = snapTile(state, wx, wy)
+      const result = buildStation(state, tile.x, tile.y)
+      if (!result.ok) setHint(result.reason ?? 'Cannot place station here', 1800)
+    },
+  }
+}
+
 function bulldozeHandlers(state: GameState): PointerHandlers {
   return {
     onMove(wx, wy) {
+      const station = findStationNear(state, wx, wy)
+      if (station) {
+        ui.hoverEdgeId = null
+        setHint(`Demolish ${station.name} (refunds half)`)
+        return
+      }
       ui.hoverEdgeId = findEdgeNear(state, wx, wy)?.id ?? null
-      setHint(ui.hoverEdgeId ? 'Click to demolish (refunds half)' : '')
+      setHint(ui.hoverEdgeId ? 'Click to demolish track (refunds half)' : '')
     },
     onClick(wx, wy) {
+      const station = findStationNear(state, wx, wy)
+      if (station) {
+        removeStation(state, station.id)
+        return
+      }
       const edge = findEdgeNear(state, wx, wy)
       if (edge) {
         bulldozeEdge(state, edge.id)
@@ -114,20 +161,37 @@ function bulldozeHandlers(state: GameState): PointerHandlers {
   }
 }
 
-function selectHandlers(_state: GameState): PointerHandlers {
-  return {}
+function selectHandlers(state: GameState): PointerHandlers {
+  return {
+    onClick(wx, wy) {
+      const station = findStationNear(state, wx, wy)
+      if (station) {
+        ui.selection = { kind: 'station', id: station.id }
+        // Path debug: pick two stations to preview the route between them.
+        if (ui.pathDebug.length === 1 && ui.pathDebug[0] !== station.id) {
+          ui.pathDebug = [ui.pathDebug[0]!, station.id]
+        } else {
+          ui.pathDebug = [station.id]
+          setHint('Click another station to preview the rail path')
+        }
+        return
+      }
+      ui.selection = null
+      ui.pathDebug = []
+      setHint('')
+    },
+  }
 }
 
 export function makeHandlers(state: GameState): PointerHandlers {
   switch (ui.tool) {
     case 'rail':
       return railHandlers(state)
+    case 'station':
+      return stationHandlers(state)
     case 'bulldoze':
       return bulldozeHandlers(state)
     default:
       return selectHandlers(state)
   }
 }
-
-/** Exposed for tools that need it later (station placement snaps too). */
-export { getNodeAt }

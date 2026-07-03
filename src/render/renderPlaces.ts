@@ -1,32 +1,14 @@
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics } from 'pixi.js'
 import { CARGO } from '../content/cargo'
 import { INDUSTRY_DEFS } from '../content/industries'
 import type { GameState } from '../game/types'
 import { TILE } from './camera'
-
-/** Label sprites that counter-scale against camera zoom for readability. */
-export const labelPool: Text[] = []
-
-function makeLabel(text: string, x: number, y: number, size = 13): Text {
-  const label = new Text({
-    text,
-    style: {
-      fontFamily: 'Avenir Next, system-ui, sans-serif',
-      fontSize: size,
-      fill: 0xffffff,
-      stroke: { color: 0x10201a, width: 3 },
-    },
-  })
-  label.anchor.set(0.5, 0)
-  label.position.set(x, y)
-  labelPool.push(label)
-  return label
-}
+import { clearLabelPool, makeLabel } from './labels'
 
 /** Cities and industries are static per game; drawn once. */
 export function renderPlaces(layer: Container, state: GameState): void {
   layer.removeChildren()
-  labelPool.length = 0
+  clearLabelPool('places')
   const g = new Graphics()
   layer.addChild(g)
 
@@ -44,7 +26,7 @@ export function renderPlaces(layer: Container, state: GameState): void {
       const by = cy + Math.sin(ang) * r * 0.45 - bs / 2
       g.rect(bx, by, bs, bs).fill(0x8a7b57)
     }
-    layer.addChild(makeLabel(city.name, cx, cy + r + 2, 14))
+    layer.addChild(makeLabel('places', city.name, cx, cy + r + 2, 14))
   }
 
   for (const ind of Object.values(state.industries)) {
@@ -58,12 +40,6 @@ export function renderPlaces(layer: Container, state: GameState): void {
       g.circle(cx, cy, s * 0.22).fill(CARGO[def.produces].color)
       g.circle(cx, cy, s * 0.22).stroke({ color: 0xffffff, width: 1.5 })
     }
-    layer.addChild(makeLabel(def.name, cx, cy + s / 2 + 2, 11))
+    layer.addChild(makeLabel('places', def.name, cx, cy + s / 2 + 2, 11))
   }
-}
-
-/** Called each frame: keep labels readable while zoomed out. */
-export function updateLabelScale(zoom: number): void {
-  const s = zoom < 1 ? Math.min(1 / zoom, 2.2) : 1
-  for (const label of labelPool) label.scale.set(s)
 }
